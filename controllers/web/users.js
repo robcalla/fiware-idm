@@ -763,7 +763,10 @@ exports.activate = function(req, res, next) {
             text: 'User already activated',
             type: 'warning',
           };
-          res.render('index', { errors: [], csrf_token: req.csrfToken() });
+          res.render('auth/activated', {
+            errors: [],
+            csrf_token: req.csrfToken(),
+          });
         } else if (
           user_registration_profile.activation_key === req.query.activation_key
         ) {
@@ -775,15 +778,21 @@ exports.activate = function(req, res, next) {
               text: 'Error activating user',
               type: 'danger',
             };
-            res.render('index', { errors: [], csrf_token: req.csrfToken() });
+            res.render('auth/activated', {
+              errors: [],
+              csrf_token: req.csrfToken(),
+            });
           } else {
             user.enabled = true;
             user.save().then(function() {
               res.locals.message = {
-                text: 'User activated. login using your credentials.',
+                text: 'User activated successfully!',
                 type: 'success',
               };
-              res.render('index', { errors: [], csrf_token: req.csrfToken() });
+              res.render('auth/activated', {
+                errors: [],
+                csrf_token: req.csrfToken(),
+              });
             });
           }
         } else {
@@ -791,11 +800,17 @@ exports.activate = function(req, res, next) {
             text: 'Error activating user',
             type: 'danger',
           };
-          res.render('index', { errors: [], csrf_token: req.csrfToken() });
+          res.render('auth/activated', {
+            errors: [],
+            csrf_token: req.csrfToken(),
+          });
         }
       } else {
         res.locals.message = { text: 'Error activating user', type: 'danger' };
-        res.render('index', { errors: [], csrf_token: req.csrfToken() });
+        res.render('auth/activated', {
+          errors: [],
+          csrf_token: req.csrfToken(),
+        });
       }
     })
     .catch(function(error) {

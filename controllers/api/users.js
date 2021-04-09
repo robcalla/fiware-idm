@@ -7,6 +7,8 @@ const fs = require('fs');
 const path = require('path');
 const _ = require('lodash');
 
+const email = require('../../lib/email.js');
+
 const external_auth = config.external_auth;
 
 const email_list = config.email_list_type
@@ -201,7 +203,7 @@ exports.create = function(req, res) {
       const user = models.user.build(req.body.user);
 
       user.image = 'default';
-      user.enabled = true;
+      user.enabled = config.enableUser;
       user.id = uuid.v4();
       user.date_password = new Date(new Date().getTime());
       return user.validate();
@@ -226,6 +228,56 @@ exports.create = function(req, res) {
     .then(function(user) {
       const user_response = user.dataValues;
       delete user_response.password;
+
+      if (!config.enableUser) {
+        const activation_key = Math.random()
+          .toString(36)
+          .substr(2);
+        const activation_expires = new Date(
+          new Date().getTime() + 1000 * 3600 * 24
+        );
+
+        models.user_registration_profile
+          .findOrCreate({
+            defaults: {
+              user_email: user.dataValues.email,
+              activation_key,
+              activation_expires,
+            },
+            where: { user_email: user.dataValues.email },
+          })
+          .then(function(user_prof) {
+            user_prof[0].activation_key = activation_key;
+            user_prof[0].activation_expires = activation_expires;
+            return user_prof[0].save({
+              fields: ['activation_key', 'activation_expires'],
+            });
+          });
+
+        const link =
+          config.host +
+          '/activate?activation_key=' +
+          activation_key +
+          '&email=' +
+          encodeURIComponent(user.dataValues.email); // eslint-disable-line snakecase/snakecase
+
+        const mail_data = {
+          name: user.dataValues.email,
+          link,
+        };
+
+        const translation = req.app.locals.translation;
+
+        // Send an email message to the user
+        email.send(
+          'activate',
+          '',
+          user.dataValues.email,
+          mail_data,
+          translation
+        );
+      }
+
       res.status(201).json({ user: user_response });
     })
     .catch(function(error) {
@@ -239,7 +291,10 @@ exports.create = function(req, res) {
               title: 'Conflict',
             },
           };
-        } else if (error.errors[0].message === 'email') {
+        } else if (
+          error.errors[0].message === 'email' ||
+          error.errors[0].message === 'emailInvalid'
+        ) {
           error = {
             error: {
               message: 'Email not valid',
