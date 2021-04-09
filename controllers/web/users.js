@@ -856,8 +856,7 @@ exports.password_send_email = function(req, res) {
         } else if (!user.enabled) {
           res.locals.message = {
             text: `The email address you have specified is registered but not activated.
-                                               Please check your email for the activation link or request a new one.
-                                               If your problem persists, please contact: fiware-lab-help@lists.fiware.org`,
+                                               Please check your email for the activation link or request a new one.`,
             type: 'danger',
           };
           res.render('auth/password_request', {
@@ -912,11 +911,14 @@ exports.password_send_email = function(req, res) {
                 translation
               );
 
-              req.session.message = {
+              res.locals.message = {
                 text: 'Reset password instructions send to ' + user.email,
                 type: 'success',
               };
-              res.redirect('/auth/login');
+              res.render('auth/activated', {
+                error: '',
+                csrf_token: req.csrfToken(),
+              });
             })
             .catch(function(error) {
               debug('  -> error' + error);
@@ -984,7 +986,10 @@ exports.change_password = function(req, res) {
               text: 'Error reseting user password',
               type: 'danger',
             };
-            res.render('index', { errors: [], csrf_token: req.csrfToken() });
+            res.render('auth/activated', {
+              errors: [],
+              csrf_token: req.csrfToken(),
+            });
           } else if (errors.length > 0) {
             res.render('auth/password_reset', {
               key: req.query.reset_key,
@@ -998,11 +1003,19 @@ exports.change_password = function(req, res) {
             user
               .save()
               .then(function() {
-                req.session.message = {
+                // req.session.message = {
+                //   text: ' Password successfully changed',
+                //   type: 'success',
+                // };
+                // res.redirect('/auth/login');
+                res.locals.message = {
                   text: ' Password successfully changed',
                   type: 'success',
                 };
-                res.redirect('/auth/login');
+                res.render('auth/activated', {
+                  errors: [],
+                  csrf_token: req.csrfToken(),
+                });
               })
               .catch(function(error) {
                 debug('  -> error' + error);
@@ -1014,14 +1027,20 @@ exports.change_password = function(req, res) {
             text: 'Error reseting user password',
             type: 'danger',
           };
-          res.render('index', { errors: [], csrf_token: req.csrfToken() });
+          res.render('auth/activated', {
+            errors: [],
+            csrf_token: req.csrfToken(),
+          });
         }
       } else {
         res.locals.message = {
           text: 'Error reseting user password',
           type: 'danger',
         };
-        res.render('index', { errors: [], csrf_token: req.csrfToken() });
+        res.render('auth/activated', {
+          errors: [],
+          csrf_token: req.csrfToken(),
+        });
       }
     })
     .catch(function(error) {
@@ -1100,12 +1119,16 @@ exports.resend_confirmation = function(req, res) {
                 // Send an email message to the user
                 email.send('activate', '', user.email, mail_data, translation);
 
-                req.session.message = {
+                res.locals.message = {
                   text:
                     'Resend confirmation instructions email to ' + user.email,
                   type: 'success',
                 };
-                res.redirect('/auth/login');
+
+                res.render('auth/activated', {
+                  error: '',
+                  csrf_token: req.csrfToken(),
+                });
               })
               .catch(function(error) {
                 debug('  -> error' + error);
